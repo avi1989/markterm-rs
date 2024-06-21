@@ -1,0 +1,24 @@
+[package]
+name = "markterm"
+description = "A rust library to render colored markdown to the terminal."
+version = "0.2.0"
+edition = "2021"
+authors = ["Avinash Kumar"]
+readme = "../README.md"
+repository = "https://github.com/avi1989/markterm-rs"
+license = "MIT"
+keywords = ["markdown", "terminal"]
+categories = ["parser-implementations"]
+
+[dependencies]
+markdown = { version = "1.0.0-alpha.17", features = ["serde"] }
+termbg = "0.5.0"
+
+[dev-dependencies]
+colored = "2.1.0"
+criterion = {version = "0.5.1", features = ["html_reports"] }
+serde_json = "1.0.117"
+
+[[bench]]
+name = "benchmark"
+harness = false

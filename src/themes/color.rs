@@ -1,5 +1,3 @@
-use colored::CustomColor;
-
 /// A simple struct to represent the color in the RGB format.
 pub struct Color {
     /// A number between 0 and 255 which represents Red spectrum.
@@ -13,7 +11,7 @@ pub struct Color {
 impl Color {
     /// Creates a new instance of Color with the hex code
     /// ```rust
-    /// use markdown_rs_terminal::themes::Color;
+    /// use markterm::Color;
     /// let white = Color::new("#FFF");
     /// assert_eq!(white.r, 255)
     /// ```
@@ -23,53 +21,56 @@ impl Color {
         color_code.retain(|c| !r#"#"#.contains(c));
 
         if color_code.len() == 3 {
-            let r_str = format!("{}{}", &color_code[0..1], &color_code[0..1]);
-            let g_str = format!("{}{}", &color_code[1..2], &color_code[1..2]);
-            let b_str = format!("{}{}", &color_code[2..3], &color_code[2..3]);
+            let r = format!("{}{}", &color_code[0..1], &color_code[0..1]);
+            let g = format!("{}{}", &color_code[1..2], &color_code[1..2]);
+            let b = format!("{}{}", &color_code[2..3], &color_code[2..3]);
 
-            let r_result = u8::from_str_radix(&r_str, 16);
-            let g_result = u8::from_str_radix(&g_str, 16);
-            let b_result = u8::from_str_radix(&b_str, 16);
+            let r = u8::from_str_radix(&r, 16);
+            let g = u8::from_str_radix(&g, 16);
+            let b = u8::from_str_radix(&b, 16);
 
-            let (r, g, b) = match (r_result, g_result, b_result) {
+            let (r, g, b) = match (r, g, b) {
                 (Ok(r_val), Ok(g_val), Ok(b_val)) => (r_val, g_val, b_val),
                 _ => {
                     panic!("Invalid Hex color code {}", hex_color);
                 }
             };
 
-            return Self { r: r, g: g, b: b };
+            Self { r, g, b }
         } else if color_code.len() == 6 {
-            let r_result = u8::from_str_radix(&color_code[0..2], 16);
-            let g_result = u8::from_str_radix(&color_code[2..4], 16);
-            let b_result = u8::from_str_radix(&color_code[4..6], 16);
+            let r = u8::from_str_radix(&color_code[0..2], 16);
+            let g = u8::from_str_radix(&color_code[2..4], 16);
+            let b = u8::from_str_radix(&color_code[4..6], 16);
 
-            let (r, g, b) = match (r_result, g_result, b_result) {
-                (Ok(r_val), Ok(g_val), Ok(b_val)) => (r_val, g_val, b_val),
+            let (r, g, b) = match (r, g, b) {
+                (Ok(r), Ok(g), Ok(b)) => (r, g, b),
                 _ => {
                     panic!("Invalid Hex color code {}", hex_color);
                 }
             };
 
-            return Self { r: r, g: g, b: b };
+            Self { r, g, b }
         } else {
             panic!("Invalid length of codes");
         }
     }
 
-    pub fn to_custom_color(&self) -> CustomColor {
-        return colored::CustomColor {
-            r: self.r,
-            g: self.g,
-            b: self.b,
-        }
+    /// Returns a semicolon delimited rgb value
+    /// ### Example
+    /// ```rust
+    /// use markterm::Color;
+    /// 
+    /// let white = Color::new("#FFF");
+    /// assert_eq!("255;255;255", white.rgb());
+    /// ```
+    pub fn rgb(&self) -> String {
+        format!("{};{};{}", &self.r, &self.g, &self.b)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use super::super::*;
     macro_rules! invalid_input_tests {
         ($($name:ident: $value:expr,)*) => {
         $(

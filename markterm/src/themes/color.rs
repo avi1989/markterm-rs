@@ -59,7 +59,7 @@ impl Color {
     /// ### Example
     /// ```rust
     /// use markterm::Color;
-    /// 
+    ///
     /// let white = Color::new("#FFF");
     /// assert_eq!("255;255;255", white.rgb());
     /// ```

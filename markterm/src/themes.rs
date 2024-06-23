@@ -1,7 +1,7 @@
 /// A module to assist with setting colors.
 pub mod color;
 
-pub use color::Color;
+use color::Color;
 
 /// Indicates whether the text is bold, underlined, italics or strikethrough
 #[derive(PartialEq, Default)]
@@ -38,7 +38,7 @@ impl TextStyle {
 
 /// Properties required to theme the element.
 pub struct ElementTheme {
-    /// Foreground color
+    /// Foreground color. i.e text color
     pub fg: Option<Color>,
 
     /// Background color
@@ -162,8 +162,8 @@ impl ElementTheme {
     }
 }
 
-/// Gets the default theme for the library.
-pub fn get_default_theme() -> Theme {
+///Gets the default dark theme
+pub fn get_dark_theme() -> Theme {
     Theme {
         header_1: ElementTheme::new(None, Some("#6155FB"), TextStyle::Normal),
         header_x: ElementTheme::new(Some("#01AFFD"), None, TextStyle::Normal),
@@ -174,6 +174,47 @@ pub fn get_default_theme() -> Theme {
         strong: ElementTheme::new(None, None, TextStyle::Bold),
         emphasis: ElementTheme::new(None, None, TextStyle::Italics),
         delete: ElementTheme::new(None, None, TextStyle::Strikethrough),
+    }
+}
+
+///Gets the default light theme
+pub fn get_light_theme() -> Theme {
+    Theme {
+        header_1: ElementTheme::new(Some("#FFF"), Some("#6155FB"), TextStyle::Normal),
+        header_x: ElementTheme::new(Some("#01AFFD"), None, TextStyle::Normal),
+        code_block: ElementTheme::new(Some("#EA3323"), Some("#E4E4E4"), TextStyle::Normal),
+        indents: ElementTheme::new(None, None, TextStyle::Normal),
+        link: ElementTheme::new(Some("#5CBC9A"), None, TextStyle::Underlined),
+        list: ElementTheme::new(None, None, TextStyle::Normal),
+        strong: ElementTheme::new(None, None, TextStyle::Bold),
+        emphasis: ElementTheme::new(None, None, TextStyle::Italics),
+        delete: ElementTheme::new(None, None, TextStyle::Strikethrough),
+    }
+}
+
+/// Gets the default theme. The default theme is based on whether the terminal
+/// has a dark background or a light background.
+pub fn get_default_theme() -> Theme {
+    let theme = get_terminal_theme().unwrap_or(termbg::Theme::Dark);
+    println!("{:?}", theme);
+
+    match theme {
+        termbg::Theme::Light => get_light_theme(),
+        _ => get_dark_theme(),
+    }
+}
+
+fn get_terminal_theme() -> Option<termbg::Theme> {
+    let timeout = std::time::Duration::from_millis(500);
+
+    let result = std::panic::catch_unwind(|| termbg::theme(timeout));
+
+    match result {
+        Ok(theme) => match theme {
+            Ok(theme) => Some(theme),
+            Err(_) => None,
+        },
+        Err(_) => None,
     }
 }
 

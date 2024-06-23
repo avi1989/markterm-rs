@@ -17,13 +17,23 @@ pub fn write(
         }
     };
 
-    if std::env::var("PRINT_AST").is_ok() {
-        let json_result = serde_json::to_string_pretty::<mdast::Node>(&ast).unwrap();
-        print!("{}", json_result);
+    if cfg!(test) {
+        print_ast_json(&ast);
     }
 
     write_colored_text(&ast, theme, &mut writer)
 }
+
+#[cfg(test)]
+fn print_ast_json(ast: &mdast::Node) {
+    if std::env::var("PRINT_AST").is_ok() {
+        let json_result = serde_json::to_string_pretty::<mdast::Node>(ast).unwrap();
+        print!("{}", json_result);
+    }
+}
+
+#[cfg(not(test))]
+fn print_ast_json(_ast: &mdast::Node) {}
 
 fn write_colored_text(
     node: &mdast::Node,
@@ -131,26 +141,27 @@ fn write_colored_text(
             let header_theme = match heading.depth {
                 1 => &theme.header_1,
                 2 => {
-                    write!(writer, "## ")?;
+                    write!(writer, "##")?;
                     &theme.header_x
                 }
                 3 => {
-                    write!(writer, "### ")?;
+                    write!(writer, "###")?;
                     &theme.header_x
                 }
                 4 => {
-                    write!(writer, "#### ")?;
+                    write!(writer, "####")?;
                     &theme.header_x
                 }
                 _ => &theme.header_x,
             };
 
             write_themed_text(
-                ElementType::Nodes(&heading.children),
+                ElementType::WhitespacePaddedNode(&heading.children),
                 theme,
                 Some(header_theme),
                 writer,
             )?;
+
             write!(writer, " \n\n")
         }
         mdast::Node::Image(_image) => {
@@ -211,6 +222,7 @@ fn write_raw_text(
 enum ElementType<'a> {
     Text(&'a str),
     Nodes(&'a Vec<mdast::Node>),
+    WhitespacePaddedNode(&'a Vec<mdast::Node>),
 }
 
 fn write_themed_text(
@@ -231,6 +243,11 @@ fn write_themed_text(
             ElementType::Text(str) => {
                 write!(writer, "{}", str)
             }
+            ElementType::WhitespacePaddedNode(children) => {
+                write!(writer, " ")?;
+                write_raw_text(children, theme, writer)?;
+                write!(writer, " ")
+            }
         },
         writer,
     )
@@ -239,6 +256,7 @@ fn write_themed_text(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::themes::get_dark_theme;
     use crate::{get_default_theme, Color};
     use colored::Colorize;
 
@@ -280,7 +298,7 @@ mod test {
 
     #[test]
     fn should_handle_headers_1() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("# This is a test", &theme, &mut result);
 
@@ -290,7 +308,7 @@ mod test {
 
         let expected = format!(
             "\n {} \n\n",
-            "This is a test".on_custom_color(to_custom_color(theme.header_1.bg.unwrap()))
+            " This is a test ".on_custom_color(to_custom_color(theme.header_1.bg.unwrap()))
         );
 
         assert_eq!(result, expected);
@@ -298,7 +316,7 @@ mod test {
 
     #[test]
     fn should_handle_headers_2() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("## This is a test", &theme, &mut result);
 
@@ -307,8 +325,8 @@ mod test {
         println!("{:?}", result);
 
         let expected = format!(
-            "\n ## {} \n\n",
-            "This is a test".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
+            "\n ##{} \n\n",
+            " This is a test ".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
         );
 
         assert_eq!(result, expected);
@@ -316,7 +334,7 @@ mod test {
 
     #[test]
     fn should_handle_headers_3() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("### This is a test", &theme, &mut result);
 
@@ -325,8 +343,8 @@ mod test {
         println!("{:?}", result);
 
         let expected = format!(
-            "\n ### {} \n\n",
-            "This is a test".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
+            "\n ###{} \n\n",
+            " This is a test ".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
         );
 
         assert_eq!(result, expected);
@@ -334,7 +352,7 @@ mod test {
 
     #[test]
     fn should_handle_headers_4() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("#### This is a test", &theme, &mut result);
 
@@ -343,8 +361,8 @@ mod test {
         println!("{:?}", result);
 
         let expected = format!(
-            "\n #### {} \n\n",
-            "This is a test".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
+            "\n ####{} \n\n",
+            " This is a test ".custom_color(to_custom_color(theme.header_x.fg.unwrap()))
         );
 
         assert_eq!(result, expected);
@@ -352,7 +370,7 @@ mod test {
 
     #[test]
     fn should_pretty_print_code() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("`This is a test`", &theme, &mut result);
 
@@ -372,7 +390,7 @@ mod test {
 
     #[test]
     fn should_add_hyperlink_to_links() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let _ = write("<http://google.com>", &theme, &mut result);
         let result = std::str::from_utf8(&result).unwrap();
@@ -394,7 +412,7 @@ mod test {
 
     #[test]
     fn should_handle_lists() {
-        let theme = get_default_theme();
+        let theme = get_dark_theme();
         let mut result = Vec::new();
         let input = r#"- List Item 1
 - List Item 2"#;

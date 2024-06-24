@@ -1,6 +1,6 @@
-use std::{fs::File, path::{Path, PathBuf}};
+use std::path::PathBuf;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 fn render() {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

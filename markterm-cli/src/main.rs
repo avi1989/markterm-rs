@@ -1,7 +1,5 @@
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use clap::{Parser, ValueEnum};
-use markterm::render_file_to_stdout;
+use std::path::{PathBuf};
+use clap::{Parser};
 
 #[derive(Parser)]
 #[command(about, long_about = None)]

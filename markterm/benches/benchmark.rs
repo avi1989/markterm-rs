@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn render() {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

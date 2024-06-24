@@ -121,9 +121,10 @@ pub fn render_text(
     theme: Option<&Theme>,
     writer: &mut impl std::io::Write,
 ) -> Result<(), std::io::Error> {
+    let default_theme = get_default_theme();
     let theme = match theme {
         Some(x) => x,
-        None => &get_default_theme(),
+        None => &default_theme,
     };
 
     writer::write(text, theme, writer)

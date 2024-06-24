@@ -21,12 +21,11 @@
 //! ## Roadmap
 //! There is a lot we want to do to markterm. The items we have in our immediate queue are listed
 //! below.
-//! - Build a binary that can be executed in the cli.
 //! - Do not output color if not a tty or if the terminal does not support it.
 //! - Add support for nested lists.
 //! - Add support for generic colors rather than always having to use RGB.
-//! - Add support for tables
-//! - Add support for inline html
+//! - Add support for tables.
+//! - Add support for inline html.
 //!
 //! ## Credits
 //! This project would not be possible without [markdown-rs](https://github.com/wooorm/markdown-rs).

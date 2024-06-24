@@ -1,5 +1,5 @@
-use std::path::{PathBuf};
-use clap::{Parser};
+use clap::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(about, long_about = None)]
@@ -23,6 +23,6 @@ fn main() {
     let result = markterm::render_file_to_stdout(&file_path, None);
     match result {
         Ok(()) => (),
-        Err(err) => panic!("Failed to render markdown {}", err)
+        Err(err) => panic!("Failed to render markdown {}", err),
     }
 }

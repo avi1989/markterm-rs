@@ -115,7 +115,10 @@ fn write_colored_text(
             writeln!(writer)
         }
         mdast::Node::InlineCode(code) => {
-            let code_text = format!(" {} ", &code.value);
+            let code_text = format!(" {} ", &code.value)
+                .replace("{{", "")
+                .replace("}}", "");
+
             write!(writer, "")?;
 
             write_themed_text(

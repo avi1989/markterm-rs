@@ -52,7 +52,6 @@ fn main() {
 - Add support for all common mark elements
 - Make the cli more fully featured.
 - Make sure it works in all terminals.
-- TTY detection.
 
 ## Credits
 This project would not be possible without [markdown-rs](https://github.com/wooorm/markdown-rs).

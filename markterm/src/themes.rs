@@ -113,14 +113,23 @@ impl ElementTheme {
     /// use markterm::{TextStyle, ElementTheme};
     ///
     /// let element_theme = ElementTheme::new(Some("#CCC"), Some("#000"), TextStyle::Normal);
-    /// element_theme.write(|w| write!(w, "Hello"), &mut std::io::stdout());
+    /// element_theme.write(|w| write!(w, "Hello"), &mut std::io::stdout(), &true);
     /// ```
-    pub fn write<F, T>(&self, write_text: F, writer: &mut T) -> Result<(), std::io::Error>
+    pub fn write<F, T>(
+        &self,
+        write_text: F,
+        writer: &mut T,
+        is_writer_tty: &bool,
+    ) -> Result<(), std::io::Error>
     where
         // F: FnOnce() -> Result<(), std::io::Error>,
         F: Fn(&mut T) -> Result<(), std::io::Error>,
         T: std::io::Write,
     {
+        if !is_writer_tty {
+            return write_text(writer);
+        }
+
         let style_key = match self.style {
             TextStyle::Normal => "".to_string(),
             _ => format!("{};", self.style.style_key()),
@@ -236,7 +245,7 @@ mod test {
 
                         let mut writer = Vec::new();
 
-                        theme.write(|w| write!(w, "{}", value), &mut writer).unwrap();
+                        theme.write(|w| write!(w, "{}", value), &mut writer, &true).unwrap();
                         let text = std::str::from_utf8(&writer).unwrap();
                         let expected = format!("{}", expected);
                         assert_eq!(expected, text);

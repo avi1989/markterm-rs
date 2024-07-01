@@ -8,6 +8,7 @@ pub fn write(
     text: &str,
     theme: &Theme,
     mut writer: impl std::io::Write,
+    is_writer_tty: bool,
 ) -> Result<(), std::io::Error> {
     let parse_options = markdown::ParseOptions::gfm();
     let ast = match markdown::to_mdast(text, &parse_options) {
@@ -21,7 +22,7 @@ pub fn write(
         print_ast_json(&ast);
     }
 
-    write_colored_text(&ast, theme, &mut writer)
+    write_colored_text(&ast, theme, &mut writer, &is_writer_tty)
 }
 
 #[cfg(test)]
@@ -39,11 +40,16 @@ fn write_colored_text(
     node: &mdast::Node,
     theme: &Theme,
     writer: &mut impl std::io::Write,
+    is_writer_tty: &bool,
 ) -> Result<(), std::io::Error> {
     match node {
-        mdast::Node::Root(root) => {
-            write_themed_text(ElementType::Nodes(&root.children), theme, None, writer)
-        }
+        mdast::Node::Root(root) => write_themed_text(
+            ElementType::Nodes(&root.children),
+            theme,
+            None,
+            writer,
+            is_writer_tty,
+        ),
         mdast::Node::Paragraph(para) => {
             let children = &para.children;
             let mut is_code_para = false;
@@ -58,7 +64,13 @@ fn write_colored_text(
                 writeln!(writer)?;
             }
 
-            write_themed_text(ElementType::Nodes(children), theme, None, writer)?;
+            write_themed_text(
+                ElementType::Nodes(children),
+                theme,
+                None,
+                writer,
+                is_writer_tty,
+            )?;
 
             if is_code_para {
                 writeln!(writer)?;
@@ -66,15 +78,20 @@ fn write_colored_text(
 
             Ok(())
         }
-        mdast::Node::Text(text) => {
-            write_themed_text(ElementType::Text(&text.value), theme, None, writer)
-        }
+        mdast::Node::Text(text) => write_themed_text(
+            ElementType::Text(&text.value),
+            theme,
+            None,
+            writer,
+            is_writer_tty,
+        ),
         mdast::Node::Strong(strong) => {
             return write_themed_text(
                 ElementType::Nodes(&strong.children),
                 theme,
                 Some(&theme.strong),
                 writer,
+                is_writer_tty,
             );
         }
         mdast::Node::Emphasis(emphasis) => {
@@ -83,6 +100,7 @@ fn write_colored_text(
                 theme,
                 Some(&theme.emphasis),
                 writer,
+                is_writer_tty,
             );
         }
         mdast::Node::BlockQuote(block_quote) => {
@@ -92,6 +110,7 @@ fn write_colored_text(
                 theme,
                 None,
                 &mut write_intercept,
+                is_writer_tty,
             )?;
             let text = std::str::from_utf8(&write_intercept).unwrap();
             let lines = text.lines();
@@ -111,6 +130,7 @@ fn write_colored_text(
                 theme,
                 Some(&theme.code_block),
                 writer,
+                is_writer_tty,
             )?;
             writeln!(writer)
         }
@@ -126,6 +146,7 @@ fn write_colored_text(
                 theme,
                 Some(&theme.code_block),
                 writer,
+                is_writer_tty,
             )?;
 
             write!(writer, "")
@@ -136,6 +157,7 @@ fn write_colored_text(
                 theme,
                 Some(&theme.delete),
                 writer,
+                is_writer_tty,
             );
         }
         mdast::Node::Heading(heading) => {
@@ -163,6 +185,7 @@ fn write_colored_text(
                 theme,
                 Some(header_theme),
                 writer,
+                is_writer_tty,
             )?;
 
             write!(writer, " \n\n")
@@ -173,22 +196,43 @@ fn write_colored_text(
         }
         mdast::Node::Link(link) => {
             let link_text = &link.url;
-            write!(writer, "{T_ESC}]8;;{}{T_ESC}\\", link_text)?;
+            if !is_writer_tty {
+                return write_themed_text(
+                    ElementType::Text(link_text),
+                    theme,
+                    Some(&theme.link),
+                    writer,
+                    is_writer_tty,
+                );
+            } else {
+                write!(writer, "{T_ESC}]8;;{}{T_ESC}\\", link_text)?;
 
-            write_themed_text(
-                ElementType::Text(link_text),
-                theme,
-                Some(&theme.link),
-                writer,
-            )?;
-            write!(writer, "{T_ESC}]8;;{T_ESC}\\")
+                write_themed_text(
+                    ElementType::Text(link_text),
+                    theme,
+                    Some(&theme.link),
+                    writer,
+                    is_writer_tty,
+                )?;
+                write!(writer, "{T_ESC}]8;;{T_ESC}\\")
+            }
         }
-        mdast::Node::List(list) => {
-            write_themed_text(ElementType::Nodes(&list.children), theme, None, writer)
-        }
+        mdast::Node::List(list) => write_themed_text(
+            ElementType::Nodes(&list.children),
+            theme,
+            None,
+            writer,
+            is_writer_tty,
+        ),
         mdast::Node::ListItem(list_item) => {
             write!(writer, "\n• ")?;
-            write_themed_text(ElementType::Nodes(&list_item.children), theme, None, writer)?;
+            write_themed_text(
+                ElementType::Nodes(&list_item.children),
+                theme,
+                None,
+                writer,
+                is_writer_tty,
+            )?;
             writeln!(writer)
         }
         // mdast::Node::Table(_) => {
@@ -213,9 +257,10 @@ fn write_raw_text(
     children: &Vec<mdast::Node>,
     theme: &Theme,
     writer: &mut impl std::io::Write,
+    is_writer_tty: &bool,
 ) -> Result<(), std::io::Error> {
     for child in children {
-        write_colored_text(child, theme, writer)?;
+        write_colored_text(child, theme, writer, is_writer_tty)?;
     }
 
     Ok(())
@@ -233,6 +278,7 @@ fn write_themed_text(
     theme: &Theme,
     color: Option<&ElementTheme>,
     writer: &mut impl std::io::Write,
+    is_writer_tty: &bool,
 ) -> Result<(), std::io::Error> {
     let color = color.unwrap_or(&ElementTheme {
         fg: None,
@@ -242,17 +288,18 @@ fn write_themed_text(
 
     color.write(
         |writer| match input {
-            ElementType::Nodes(children) => write_raw_text(children, theme, writer),
+            ElementType::Nodes(children) => write_raw_text(children, theme, writer, is_writer_tty),
             ElementType::Text(str) => {
                 write!(writer, "{}", str)
             }
             ElementType::WhitespacePaddedNode(children) => {
                 write!(writer, " ")?;
-                write_raw_text(children, theme, writer)?;
+                write_raw_text(children, theme, writer, is_writer_tty)?;
                 write!(writer, " ")
             }
         },
         writer,
+        is_writer_tty,
     )
 }
 
@@ -266,44 +313,65 @@ mod test {
     macro_rules! string_match {
         ($($name:ident: $value:expr,)*) => {
         $(
-            #[test]
-            fn $name() {
-                let (value, expected) = $value;
-                let theme = get_default_theme();
-                let mut result = Vec::new();
-                let _ = write(value, &theme, &mut result);
-                let result = std::str::from_utf8(&result).unwrap();
+            #[cfg(test)]
+            mod $name {
+                use super::*;
 
-                println!("{:?}", result);
+                #[test]
+                fn should_print_themed_text_if_tty() {
+                    let (value, expected_if_tty, _) = $value;
+                    let theme = get_default_theme();
+                    let mut result = Vec::new();
+                    let _ = write(value, &theme, &mut result, true);
+                    let result = std::str::from_utf8(&result).unwrap();
 
-                assert_eq!(result, expected.to_string())
+                    println!("{:?}", result);
+
+                    assert_eq!(result, expected_if_tty.to_string())
+                }
+
+                #[test]
+                fn should_print_plain_text_if_not_tty() {
+                    let (value, _, expected_if_not_tty) = $value;
+                    let theme = get_default_theme();
+                    let mut result = Vec::new();
+                    let _ = write(value, &theme, &mut result, false);
+                    let result = std::str::from_utf8(&result).unwrap();
+
+                    println!("Result = {:?}\n Value = {:?}", result, value);
+
+                    assert_eq!(result, expected_if_not_tty)
+                 }
             }
         )*
         };
     }
 
     string_match! {
-        should_print_text_normally: ("This is text", "This is text".normal()),
-        should_handle_strong_text: ("**This is text**", "This is text".bold()),
-        should_handle_strong_text_in_middle: ("This is **text**", format!("This is {}", "text".bold())),
-        should_handle_emphasis: ("*This text is italics*", "This text is italics".italic()),
-        should_handle_emphasis_in_middle: ("This text is *italics*", format!("This text is {}", "italics".italic())),
-        should_handle_blockquotes: ("> This is a blockquote", "│ This is a blockquote\n"),
-        should_handle_blockquotes_2: (r#"
+        normal_text: ("This is text", "This is text".normal(), "This is text"),
+        strong_text: ("**This is text**", "This is text".bold(), "This is text"),
+        normal_plus_strong_text: ("This is **text**", format!("This is {}", "text".bold()), "This is text"),
+        emphasis_text: ("*This text is italics*", "This text is italics".italic(), "This text is italics"),
+        normal_plus_emphasis_text: ("This text is *italics*", format!("This text is {}", "italics".italic()), "This text is italics"),
+        blockquotes: ("> This is a blockquote", "│ This is a blockquote\n", "│ This is a blockquote\n"),
+        blockquotes_with_multiple_lines: (r#"
 > This is a blockquote
 > This is a blockquote"#, 
     r#"│ This is a blockquote
 │ This is a blockquote
+"#,
+            r#"│ This is a blockquote
+│ This is a blockquote
 "#),
-        should_handle_break: ("This is a  \ntest", "This is a\ntest"), // Note the two spaces before the newline. This generates a Break Node
-        should_handle_striketrough: ("~Delete~", "Delete".strikethrough()), // Note the two spaces before the newline. This generates a Break Node
+        line_breaks: ("This is a  \ntest", "This is a\ntest", "This is a\ntest"), // Note the two spaces before the newline. This generates a Break Node
+        strikethrough: ("~Delete~", "Delete".strikethrough(), "Delete"), // Note the two spaces before the newline. This generates a Break Node
     }
 
     #[test]
-    fn should_handle_headers_1() {
+    fn should_handle_headers_1_in_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("# This is a test", &theme, &mut result);
+        let _ = write("# This is a test", &theme, &mut result, true);
 
         let result = std::str::from_utf8(&result).unwrap();
 
@@ -318,10 +386,25 @@ mod test {
     }
 
     #[test]
-    fn should_handle_headers_2() {
+    fn should_handle_headers_1_if_not_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("## This is a test", &theme, &mut result);
+        let _ = write("# This is a test", &theme, &mut result, false);
+
+        let result = std::str::from_utf8(&result).unwrap();
+
+        println!("{:?}", result);
+
+        let expected = "\n  This is a test  \n\n";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_handle_headers_2_in_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("## This is a test", &theme, &mut result, true);
 
         let result = std::str::from_utf8(&result).unwrap();
 
@@ -336,10 +419,25 @@ mod test {
     }
 
     #[test]
-    fn should_handle_headers_3() {
+    fn should_handle_headers_2_if_not_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("### This is a test", &theme, &mut result);
+        let _ = write("## This is a test", &theme, &mut result, false);
+
+        let result = std::str::from_utf8(&result).unwrap();
+
+        println!("{:?}", result);
+
+        let expected = "\n ## This is a test  \n\n";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_handle_headers_3_if_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("### This is a test", &theme, &mut result, true);
 
         let result = std::str::from_utf8(&result).unwrap();
 
@@ -354,10 +452,25 @@ mod test {
     }
 
     #[test]
-    fn should_handle_headers_4() {
+    fn should_handle_headers_3_if_not_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("#### This is a test", &theme, &mut result);
+        let _ = write("### This is a test", &theme, &mut result, false);
+
+        let result = std::str::from_utf8(&result).unwrap();
+
+        println!("{:?}", result);
+
+        let expected = "\n ### This is a test  \n\n";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_handle_headers_4_if_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("#### This is a test", &theme, &mut result, true);
 
         let result = std::str::from_utf8(&result).unwrap();
 
@@ -372,10 +485,25 @@ mod test {
     }
 
     #[test]
-    fn should_pretty_print_code() {
+    fn should_handle_headers_4_if_not_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("`This is a test`", &theme, &mut result);
+        let _ = write("#### This is a test", &theme, &mut result, false);
+
+        let result = std::str::from_utf8(&result).unwrap();
+
+        println!("{:?}", result);
+
+        let expected = "\n #### This is a test  \n\n";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_pretty_print_code_if_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("`This is a test`", &theme, &mut result, true);
 
         let result = std::str::from_utf8(&result).unwrap();
 
@@ -392,10 +520,25 @@ mod test {
     }
 
     #[test]
-    fn should_add_hyperlink_to_links() {
+    fn should_pretty_print_code_if_not_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
-        let _ = write("<http://google.com>", &theme, &mut result);
+        let _ = write("`This is a test`", &theme, &mut result, false);
+
+        let result = std::str::from_utf8(&result).unwrap();
+
+        println!("{:?}", result);
+
+        let expected = "\n This is a test \n";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_add_hyperlink_to_links_if_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("<http://google.com>", &theme, &mut result, true);
         let result = std::str::from_utf8(&result).unwrap();
 
         let link = "http://google.com";
@@ -408,19 +551,48 @@ mod test {
             link.custom_color(fg_color).underline()
         );
 
-        // let expected = "\u{1b}]8;;http://google.com\u{1b}\\\u{1b}[4;48;2;97;85;251mhttp://google.com\u{1b}[0m\u{1b}]8;;\u{1b}\\";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_not_hyperlink_to_links_if_not_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let _ = write("<http://google.com>", &theme, &mut result, false);
+        let result = std::str::from_utf8(&result).unwrap();
+
+        let expected = "http://google.com";
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn should_handle_lists() {
+    fn should_handle_lists_if_tty() {
         let theme = get_dark_theme();
         let mut result = Vec::new();
         let input = r#"- List Item 1
 - List Item 2"#;
 
-        let _ = write(input, &theme, &mut result);
+        let _ = write(input, &theme, &mut result, true);
+        let result = std::str::from_utf8(&result).unwrap();
+        println!("{:?}", result);
+
+        let expected = r#"
+• List Item 1
+
+• List Item 2
+"#;
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn should_handle_lists_if_not_tty() {
+        let theme = get_dark_theme();
+        let mut result = Vec::new();
+        let input = r#"- List Item 1
+- List Item 2"#;
+
+        let _ = write(input, &theme, &mut result, false);
         let result = std::str::from_utf8(&result).unwrap();
         println!("{:?}", result);
 

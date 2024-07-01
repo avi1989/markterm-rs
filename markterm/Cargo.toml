@@ -1,7 +1,7 @@
 [package]
 name = "markterm"
 description = "A rust library to render colored markdown to the terminal."
-version = "0.2.5"
+version = "0.3.0"
 edition = "2021"
 authors = ["Avinash Kumar"]
 readme = "../README.md"

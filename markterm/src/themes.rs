@@ -196,7 +196,6 @@ pub fn get_light_theme() -> Theme {
 /// has a dark background or a light background.
 pub fn get_default_theme() -> Theme {
     let theme = get_terminal_theme().unwrap_or(termbg::Theme::Dark);
-    println!("{:?}", theme);
 
     match theme {
         termbg::Theme::Light => get_light_theme(),

@@ -32,7 +32,7 @@ impl Color {
             let (r, g, b) = match (r, g, b) {
                 (Ok(r_val), Ok(g_val), Ok(b_val)) => (r_val, g_val, b_val),
                 _ => {
-                    panic!("Invalid Hex color code {}", hex_color);
+                    panic!("Invalid Hex color code {hex_color}");
                 }
             };
 
@@ -45,7 +45,7 @@ impl Color {
             let (r, g, b) = match (r, g, b) {
                 (Ok(r), Ok(g), Ok(b)) => (r, g, b),
                 _ => {
-                    panic!("Invalid Hex color code {}", hex_color);
+                    panic!("Invalid Hex color code {hex_color}");
                 }
             };
 

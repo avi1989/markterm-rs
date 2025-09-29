@@ -7,7 +7,7 @@ fn render() {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     d.push("benches/sample.md");
 
-    print!("{:?}", d);
+    print!("{d:?}");
     let _ = markterm::render_file_to_stdout(&d, None, ColorChoice::Auto);
 }
 

@@ -32,6 +32,6 @@ fn main() {
     let result = markterm::render_file_to_stdout(&file_path, None, color_choice);
     match result {
         Ok(()) => (),
-        Err(err) => panic!("Failed to render markdown {}", err),
+        Err(err) => panic!("Failed to render markdown {err}"),
     }
 }

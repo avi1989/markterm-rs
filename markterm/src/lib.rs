@@ -104,7 +104,7 @@ pub fn render_file(
     let file = match File::open(file_path) {
         Ok(f) => f,
         Err(e) => {
-            panic!("Unable to open file: {}", e);
+            panic!("Unable to open file: {e}");
         }
     };
 

@@ -218,10 +218,7 @@ fn get_terminal_theme() -> Option<termbg::Theme> {
     let result = std::panic::catch_unwind(|| termbg::theme(timeout));
 
     match result {
-        Ok(theme) => match theme {
-            Ok(theme) => Some(theme),
-            Err(_) => None,
-        },
+        Ok(theme) => theme.ok(),
         Err(_) => None,
     }
 }

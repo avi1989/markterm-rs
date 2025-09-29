@@ -29,7 +29,7 @@ pub fn write(
 fn print_ast_json(ast: &mdast::Node) {
     if std::env::var("PRINT_AST").is_ok() {
         let json_result = serde_json::to_string_pretty::<mdast::Node>(ast).unwrap();
-        print!("{}", json_result);
+        print!("{json_result}");
     }
 }
 
@@ -85,25 +85,21 @@ fn write_colored_text(
             writer,
             is_writer_tty,
         ),
-        mdast::Node::Strong(strong) => {
-            return write_themed_text(
-                ElementType::Nodes(&strong.children),
-                theme,
-                Some(&theme.strong),
-                writer,
-                is_writer_tty,
-            );
-        }
-        mdast::Node::Emphasis(emphasis) => {
-            return write_themed_text(
-                ElementType::Nodes(&emphasis.children),
-                theme,
-                Some(&theme.emphasis),
-                writer,
-                is_writer_tty,
-            );
-        }
-        mdast::Node::BlockQuote(block_quote) => {
+        mdast::Node::Strong(strong) => write_themed_text(
+            ElementType::Nodes(&strong.children),
+            theme,
+            Some(&theme.strong),
+            writer,
+            is_writer_tty,
+        ),
+        mdast::Node::Emphasis(emphasis) => write_themed_text(
+            ElementType::Nodes(&emphasis.children),
+            theme,
+            Some(&theme.emphasis),
+            writer,
+            is_writer_tty,
+        ),
+        mdast::Node::Blockquote(block_quote) => {
             let mut write_intercept = Vec::new();
             write_themed_text(
                 ElementType::Nodes(&block_quote.children),
@@ -115,7 +111,7 @@ fn write_colored_text(
             let text = std::str::from_utf8(&write_intercept).unwrap();
             let lines = text.lines();
             for line in lines {
-                writeln!(writer, "│ {}", line)?
+                writeln!(writer, "│ {line}")?
             }
 
             Ok(())
@@ -151,15 +147,13 @@ fn write_colored_text(
 
             write!(writer, "")
         }
-        mdast::Node::Delete(delete) => {
-            return write_themed_text(
-                ElementType::Nodes(&delete.children),
-                theme,
-                Some(&theme.delete),
-                writer,
-                is_writer_tty,
-            );
-        }
+        mdast::Node::Delete(delete) => write_themed_text(
+            ElementType::Nodes(&delete.children),
+            theme,
+            Some(&theme.delete),
+            writer,
+            is_writer_tty,
+        ),
         mdast::Node::Heading(heading) => {
             // TODO: Build different styles for different depths
             write!(writer, "\n ")?;
@@ -197,15 +191,15 @@ fn write_colored_text(
         mdast::Node::Link(link) => {
             let link_text = &link.url;
             if !is_writer_tty {
-                return write_themed_text(
+                write_themed_text(
                     ElementType::Text(link_text),
                     theme,
                     Some(&theme.link),
                     writer,
                     is_writer_tty,
-                );
+                )
             } else {
-                write!(writer, "{T_ESC}]8;;{}{T_ESC}\\", link_text)?;
+                write!(writer, "{T_ESC}]8;;{link_text}{T_ESC}\\")?;
 
                 write_themed_text(
                     ElementType::Text(link_text),
@@ -290,7 +284,7 @@ fn write_themed_text(
         |writer| match input {
             ElementType::Nodes(children) => write_raw_text(children, theme, writer, is_writer_tty),
             ElementType::Text(str) => {
-                write!(writer, "{}", str)
+                write!(writer, "{str}")
             }
             ElementType::WhitespacePaddedNode(children) => {
                 write!(writer, " ")?;
@@ -375,7 +369,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = format!(
             "\n {} \n\n",
@@ -393,7 +387,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = "\n  This is a test  \n\n";
 
@@ -408,7 +402,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = format!(
             "\n ##{} \n\n",
@@ -426,7 +420,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = "\n ## This is a test  \n\n";
 
@@ -441,7 +435,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = format!(
             "\n ###{} \n\n",
@@ -459,7 +453,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = "\n ### This is a test  \n\n";
 
@@ -474,7 +468,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = format!(
             "\n ####{} \n\n",
@@ -492,7 +486,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = "\n #### This is a test  \n\n";
 
@@ -507,7 +501,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = format!(
             "\n{}\n",
@@ -527,7 +521,7 @@ mod test {
 
         let result = std::str::from_utf8(&result).unwrap();
 
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = "\n This is a test \n";
 
@@ -575,7 +569,7 @@ mod test {
 
         let _ = write(input, &theme, &mut result, true);
         let result = std::str::from_utf8(&result).unwrap();
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = r#"
 • List Item 1
@@ -594,7 +588,7 @@ mod test {
 
         let _ = write(input, &theme, &mut result, false);
         let result = std::str::from_utf8(&result).unwrap();
-        println!("{:?}", result);
+        println!("{result:?}");
 
         let expected = r#"
 • List Item 1
